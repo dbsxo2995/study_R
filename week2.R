@@ -20,12 +20,14 @@
     table(midwest$mean_Asain)
     
 #2.1.1. 외부데이터 처리하기
-    exam <- read_excel("excel_exam.xlsx")
+    library(readxl)
+    exam <- read_excel("excel_exam.xlsx") %>% as.data.frame()
+    exam
     
     #2.1.2 header & Col_names
     View(read_excel("excel_exam_novar.xlsx"))
     exam_novar <- read_excel("excel_exam_novar.xlsx", col_names = F)
-    
+    exam_novar
     
     library(dplyr)
     exam_novar <- rename(exam_novar, First = X__1)
@@ -66,6 +68,9 @@
     
     #Sepal.Width & Sepal.Length를 Species로 요약
     summaryBy(Sepal.Width + Sepal.Length ~ Species, data= iris)
+    summaryBy(Sepal.Width + Sepal.Length ~ Species, data= iris, FUN = c(median, mean))
+    summaryBy(.~Species, data = iris, FUN = mean)
+    
     #summaryBy(formula, data, FUN)
     
     #2.2.1.2 orderBy()
@@ -73,8 +78,10 @@
     head(iris[order(iris$Sepal.Width),],10)
     head(iris[order(iris$Sepal.Width, iris$Sepal.Length),],10)
     
-    View(orderBy(~ Sepal.Width, iris))
-    View(orderBy(~ Sepal.Width + Sepal.Length, iris))
+    (orderBy(~ Sepal.Width, iris))
+    (orderBy(~ Sepal.Width + Sepal.Length, iris))
+    (orderBy(~ Sepal.Width - Sepal.Length, iris))
+    (orderBy(Species~ Sepal.Width + Sepal.Length, iris))
     
     #2.2.1.3 samply
     sample(
@@ -87,7 +94,11 @@
     iris[sample(NROW(iris), NROW(iris)), ]
     
     set.seed(1234)
-    idx <- sample(x = 1:2, size = nrow(iris), prob = c(0.7,0.3), replace = TRUE)
+    idx <- sample(x = 1:2,
+                  size = nrow(iris),
+                  prob = c(0.7,0.3),
+                  replace = TRUE)
+    
     train_set <- iris[idx == 1, ]
     test_set <- iris[idx == 2, ]
     
@@ -96,13 +107,15 @@
     #subset(x, subset, select )
     
     split(iris, iris$Species)     #백터 분할하기 
+    x <- split(iris, iris$Species)     #백터 분할하기 
+    
     subset(iris, Species == "setosa")
     subset(iris,
            Species == "setosa" & 
              Sepal.Length > 5.0)
     
     subset(iris, select = c(Sepal.Length, Species))
-    subset(iris, select = -c(Sepal.Length, Species))라
+    subset(iris, select = -c(Sepal.Length, Species))
     
     subset(iris, Species %in% c("setosa","virginica")) # %in% 은 매칭확인 논리연산자
     
@@ -111,11 +124,11 @@
     data_iris <- iris
     iris[!names(iris) %in% c("Species")]
     
+    (iris[,1:4] == iris[!names(iris) %in% c("Species")]) %>% table()
+    
 #2.4.1 데이터 정렬
     #sort(x, #정렬할 벡터
     #    decreasing = FALSE, #내림차순 여부
-    #   na.last = NA     #FALSE, NA값이 맨처음에, TRUE, NA값이 맨뒤에  )
-    
     x <- c(20,11,33,50,47)     
     sort(x, decreasing = T)
     
@@ -126,7 +139,9 @@
                         final = c(90,100,20,60,70))
     
     left_join(test1, test2, by = "id")
+    right_join(test1, test2, by = "id")
     
+    merge(test1, test2, by = "id") ##
     
     group_a <- data.frame(id = c(1,2,3,4,5),
                           grade = c("A","B","A","A","A"), stringsAsFactors = F)
@@ -135,6 +150,9 @@
     
     bind_rows(group_a, group_b)
     bind_cols(group_a, group_b)
+    
+    rbind(group_a, group_b) ##
+    cbind(group_a, group_b) ##
     
 #2.6.1 데이터 정제하기
     df <- data.frame(sex = c("M","M",NA,"F","M"),
@@ -153,16 +171,22 @@
     mean(df$score, na.rm = T)
     sum(df$money, na.rm = T)
     
+    mean(df$score)
+    
 #2.6.3 결측치 만들기
     exam <- read.csv("csv_exam.csv")
     exam[c(3,8,15), "math"] <- NA
     
-    summaryBy(.~class, subset(exam, select = -id), na.rm = T)
+    summaryBy(.~class, data= subset(exam, select = -id), na.rm = T)
     
 #2.6.4 결측치 대체하기
     mean(exam$math, na.rm = T)
     exam$math <- ifelse(is.na(exam$math), mean(exam$math, na.rm = T), exam$math)
     table(is.na(exam$math))
+    
+#Q1. 각 클래스 별로 평균을 구해서 exam데이터의 결측치를 대체하라
+#    index <- sample(1:2, size = nrow(exam), replace = T, prob = c(0.3,0.2))
+#    exam[index == 1, "math"] <- NA 
     
     math1 <- summaryBy(.~class, subset(exam, select = -id), na.rm = T)[1, 2]
     math2 <- summaryBy(.~class, subset(exam, select = -id), na.rm = T)[2, 2]
@@ -174,16 +198,40 @@
     exam$math <- ifelse(exam$class == 1 & is.na(exam$math), math1,
                         ifelse(exam$class == 2 & is.na(exam$math), math2,
                                ifelse(exam$class == 3 & is.na(exam$math), math3, math4)))
-
+    exam
+#2.6.4 부록 Mice package, MissRanger Package
+    exam <- read_excel("excel_exam.xlsx") %>% as.data.frame()
+    index <- sample(1:2, size = nrow(exam), replace = T, prob = c(0.3,0.2))
+    exam[index == 1, "math"] <- NA     
+    exam_Full <- read_excel("excel_exam.xlsx") %>% as.matrix()
     
-#2.6.5 데이터처리를 위한 필수 함수 2
+    library(mice)
+    dim(exam)
+    exam_imp <- mice(data = exam, m = 10, maxit = 10, method = "rf", seed = 1234)
+    exam_imp_pmm <- mice(data = exam, method = "pmm", m = 10, maxit = 7, seed = 1234)
+    exam_imp$imp$math #각 회전마다 어떤식으로 예측하였는지
+    impute_exam <- complete(exam_imp)
+    impute_exam_pmm <- complete(exam_imp_pmm)
+    
+    mean(impute_exam$math) - mean(exam_Full); median(impute_exam$math) - median(exam_Full);
+    mean(impute_exam_pmm$math) - mean(exam_Full); median(impute_exam_pmm$math) - median(exam_Full);
+    
+    
+    library(missRanger)
+    Ranger_exam <- missRanger(data = exam, maxiter = 10, pmm.k = 5, num.tree = 100, seed = 1234)
+    mean(Ranger_exam$math) - mean(exam_Full); median(Ranger_exam$math) - median(exam_Full);
+    
+
+    #2.6.5 데이터처리를 위한 필수 함수 2
     #apply(x, margin, FUN) 
     mat <- matrix(1:9, ncol = 3); mat
     apply(mat, 1, sum); apply(mat, 2, sum)
     apply(iris[, 1:4], 2, mean)
     
-    #lapply(x, FUN) => data -> list
+    #lapply(x, FUN) => vector or list -> list
     result <- lapply(1:3, function(x){x^2}); result
+    
+    result[[1]]
     result[[3]]
     unlist(result) # data <- list
     
@@ -192,12 +240,6 @@
     
     lapply(iris[,1:4], mean); lapply(iris[,1:4], sum)
     
-    #sapply(X, FUN) => data -> vector or matrix
-    sapply(iris[,1:4], mean)
-    sapply(iris, class)
-    
-    y <- sapply(iris[,1:4], function(x) { x > 3}); y
-    class(y)
     
 #2.7.1. options MATH
     #2.7.1.1 조합
@@ -205,7 +247,7 @@
     choose(5,2); choose(3,2)
     
     #2.7.1.2 조합 생성
-    combn(5, 2);
+    combn(x = 5, m = 2);
     combn(1:5, 3);
     
     #2.7.1.3 난수 생성
@@ -220,13 +262,14 @@
 #2.7.2 문자열
     #2.7.2.1 문자열의 길이
     nchar("hello"); nchar(c("hello", "my","name","is","yoontae"))
+    
     #2.7.2.2 문자열 연결하기
     paste("hello","my","name","is","yoontae")
     paste("hello","my","name","is","yoontae", sep = "")
     paste("hello","my","name","is","yoontae", sep = "-")
 
     name <- c("Yoontae", "R_BOOK", "SEOUL")
-    paste("hello","my","name","is",name)
+    paste("hello","my","name","is", name)
     paste("hello","my","name","is",name, sep = "-")
     paste("hello","my","name","is",name, collapse = ", ANDDDD ") #연결도 가능
     
@@ -358,18 +401,4 @@
     
     table(is.na(mpg$hwy))
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+  
