@@ -245,20 +245,44 @@
     #2.7.1.1 조합
     #choose(n, k)
     choose(5,2); choose(3,2)
-    
-    #2.7.1.2 조합 생성
-    combn(x = 5, m = 2);
-    combn(1:5, 3);
-    
-    #2.7.1.3 난수 생성
+
+    #2.7.1.2 난수 생성
     runif(1); rnorm(1); rnorm(n = 10, 20, 30); rpois(1, lambda = 2)
     
-    #2.7.1.4 누적분포함수
+    #2.7.1.3 누적분포함수
     punif(q = 0.75, 0, 1); pnorm(q = 1.645, 0, 1); ppois(q = 20, lambda = 30)
     
-    #2.7.1.5 확률을 분위수로 나타내기
+    #2.7.1.4 확률을 분위수로 나타내기
     qnorm(p = 0.05, mean =0, sd = 1); qnorm(p = c(0.025,0.975))
-
+    
+    #2.7.1.5 정규분포
+    sample_data <- read.csv("jongmok.csv")
+    y <- dnorm(x = sample_data$Return, mean = mean(sample_data$Return), sd = sd(sample_data$Return)); y
+    plot(sample_data$Return, y)
+    
+    #2.7.1.6 누적분포(정규분포에서)
+    pnorm(0.01, mean(sample_data$Return), sd(sample_data$Return)) #1%보다 작거나 같은 수익률을 얻을 확률은 69%
+    pnorm(0.01, mean(sample_data$Return), sd(sample_data$Return), lower.tail = F) #1%보다 높은 수익률을 얻을 확률은 1-0.69 
+    
+    
+    #2.7.1.7 분위수(정규분포)
+    qnorm(0.16, mean(sample_data$Return), sd(sample_data$Return), lower.tail = F) #수익률이 2%이상일 확률은 16%
+    
+    #2.7.1.8 난수생성(정규분포)
+    rnorm(5, mean = 0, sd = 1)
+    
+    #2.7.1.9 로그정규분포 dlnorm(x, meanlog, sdlog)
+    y <- dlnorm(sample_data$Volume, mean(sample_data$Volume), sd(sample_data$Volume))
+    plot(sample_data$Volume, y)
+    
+    #2.7.1.10 누적분포(로그정규분포에서) plnorm(x, meanlog, sdlog)
+    y <- plnorm(sample_data$Volume, mean(sample_data$Volume), sd(sample_data$Volume))
+    plot(sample_data$Volume, y)
+    
+    #2.7.1.11 포아송 분포 ppois(x, lambda)
+    #분단위로 조사 하였더니 가격이 상승하는 주식이 평균 10개라고 하자. 특정 분에 수익을 올리는 주식이 12개일 확률은?
+    ppois(12, lambda = 10, lower.tail = F)
+    
 #2.7.2 문자열
     #2.7.2.1 문자열의 길이
     nchar("hello"); nchar(c("hello", "my","name","is","yoontae"))
@@ -401,4 +425,53 @@
     
     table(is.na(mpg$hwy))
     
-  
+    
+    
+    #3. 표본추출법
+    #3.1 무작위 표본추출 - 모집단의 각 요소들이 표본으로 선택될 가능성이 모두 같음
+    ind <- sample(1:2,
+                  size = nrow(sample_data),
+                  prob = c(0.5,0.6), replace = T)
+    sample_data[ind == 1, ]
+    sample_data[ind == 2, ]
+    
+    #3.2 층화 표본추출 - 모집단을 여러 그룹으로 나눈 후 무작위로 추출한다.
+    install.packages("sampling")
+    library(sampling)
+    #step1 그룹 정하기 - Flag과 Senti를 기준으로 몇개의 그룹이 존재하는가?
+    table(sample_data$Flag, sample_data$Sentiments) 
+    #step2 표본 추출
+    str_data <- strata(sample_data, stratanames = c("Flag","Sentiments"), size = c(6,5,4,3), method = "srswor")
+    str_data
+    sample_data[str_data[1:6, "ID_unit"],]
+    
+    #4.1 적률생성함수
+    install.packages("e1071")
+    library(e1071)
+    moment(sample_data$Return, order = 1); moment(sample_data$Return, order= 2)
+    mean(sample_data$Return)
+    
+    var(sample_data$Return)
+    moment(sample_data$Return, order = 2) - moment(sample_data$Return, order = 1)^2
+    
+    #4.2 첨도와 왜도
+    kurtosis(sample_data$Return)
+    skewness(sample_data$Return) #왜도 = 0, 평균 = 중앙값 왜도 >0,평균값 > 중앙값 왜도 < 0 평균 < 중앙값
+    
+    #4.3 상관관계
+    library(corrgram)
+    cor(sample_data[,2:5], method = "pearson")
+    corrgram(sample_data[,2:5], upper.panel = panel.conf)
+    
+    #4.4 이상치검출방법
+    boxplot(sample_data$Volume) #boxwex = 0.1 박스크기 조절
+    library(DMwR)
+    sample_data_1 <- sample_data[,"Volume"]
+    outlier_score <- lofactor(sample_data_1, k= 4); outlier_score
+    plot(density(outlier_score))
+    
+    sample_data_1[order(outlier_score, decreasing = T)[1:2]]
+    
+    #4.5 표준화 방법
+    scale(sample_data$Volume, center = T, scale = T)
+    
