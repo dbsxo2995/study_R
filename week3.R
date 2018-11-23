@@ -124,49 +124,100 @@ library(tm)
 
 
 #3.2 기초 자연어 처리 
-extractNoun('사과를 먹으러 산속으로 갑니다') #extractNoun 명사만 뽑는 함수.
-pos <- (SimplePos22('사과를 먹으러 산속으로 갑니다'))
-pos #동사 형용사 뽑고싶으면 NC으로끝나는 단어와 PV로 시작하는 단어를 뽑으면 동사 형용사
+install.packages(c('rvest', 'httr', 'stringr', 'readxl', 'dplyr', 'tm', 'qgraph', 'KoNLP'), repos='http://cran.nexr.com')
 
+#1 simplepos222
+library(KoNLP)
+library(stringr)
+
+extractNoun('사과를 먹으러 산속으로 갑니다') #extractNoun 명사만 뽑는 함수.
+
+
+pos <- paste(SimplePos22('사과를 먹으러 산속으로 갑니다'))
+pos #동사 형용사 뽑고싶으면 N으로끝나는 단어와 P로 끝나는 단어를 뽑으면 동사 형용사
+
+extracted <- str_match(pos, '([가-힣]+)/[NCPV]') #동사와 형용사까지 뽑고 싶다면 다음과 같이 합니다.
+str_match(pos, "([가-힣]+)/")
+keyword <- extracted[,2]
+keyword[!is.na(keyword)]
+
+#simplepos09
+pos <- paste(SimplePos09('이 영화 정말 재미있다'))
+extracted <- str_match(pos, '([가-힣]+)/[NP]')
+keyword <- extracted[,2]
+keyword[!is.na(keyword)]
+
+#2. Term Document Matrix
+library(tm)
+text <- c("hello", "world","text","one","two","hello world")
+cps <- Corpus(VectorSource(text))
+tdm <- TermDocumentMatrix(cps)
+
+as.matrix(tdm)
+
+#2-1. korean Term Document Matrix
+library(tm)
+library(KoNLP)
+library(stringr)
+
+text <- c("예산에서 재배되는 사과가 제일 맛있다","사과는 맛있다")
+cps <- VCorpus(VectorSource(text))
+tdm <- TermDocumentMatrix(cps)
+as.matrix(tdm)
+
+#2-2.korean Term Document Matrix Uses function Noun
+ko_words <- function(doc){
+  d = as.character(doc)
+  extractNoun(d)
+}
+
+text <- c("예산에서 재배되는 사과가 제일 맛있다","사과는 맛있다")
+cps <- VCorpus(VectorSource(text))
+
+tdm <- TermDocumentMatrix(cps,
+                          control = list(tokenize = ko_words,
+                                         wordLengths = c(1, Inf)))
+as.matrix(tdm)
+
+#2-3. korean TDM Uses function 2
 ko_words <- function(doc){
   d = as.character(doc)
   pos = SimplePos22(d)
   
-  extracted = str_match(pos, pattern = "([가-힣]+)/[NC+]") #동사와 형용사는 NCPV 혹은 PV만
+  extracted = str_match(pos, pattern = "([가-힣]+)/[NCPV]")
   keyword = extracted[, 2]
   keyword[!is.na(keyword)]
 }
 
-text <- c("사과를 먹으러 산속으로 갑니다")
-
+text <- c("예산에서 재배되는 사과가 제일 맛있다","사과는 맛있다")
 cps <- VCorpus(VectorSource(text))
 tdm <- TermDocumentMatrix(cps,
                           control = list(tokenize = ko_words,
-                                         wordLengths = c(2, Inf),
-                                         stopwords= c("갑니")))
+                                         wordLengths = c(2, Inf)))
 as.matrix(tdm)
 
-text1 <- c("예산에서 재배되는 사과가 제일 맛있다","사과는 맛있다")
+#3. stopwords
+library(tm)
+doc <- c("This is a banana", "That is an apple.", "Hello World", "I Love You")
+corpus <- Corpus(VectorSource(doc))
 
-cps <- VCorpus(VectorSource(text1))
-tdm <- TermDocumentMatrix(cps,
-                          control = list(tokenize = ko_words,
-                                         wordLengths = c(2, Inf),
-                                         stopwords= c("맛있")))
+tdm <- TermDocumentMatrix(corpus,
+                          control = list(removePunctuation = T,
+                                         wordLengths = c(1, Inf),
+                                         stopwords = T,
+                                         removeNumbers = T))
+stopwords()
+stopwords("fr")
 as.matrix(tdm)
 
-library(slam)
-library(doBy)
-word_count <- as.array(rollup(tdm, 2)) #행합계
-word_order <- order(word_count, decreasing = T)
-freq_word <- word_order[1:2] 
-row.names(tdm[freq_word, ])
+tdm <- TermDocumentMatrix(corpus,
+                          control = list(removePunctuation = T,
+                                         wordLengths = c(1, Inf),
+                                         stopwords = c("love","Hello")))
+as.matrix(tdm)
 
-word <- sort(slam::row_sums(tdm), decreasing = T)
-data <- data.frame(X=names(word),freq=word)
-#
 
-#3.3 WORD CLOUD 
+#4 WORD CLOUD 
 hiphop <- read.csv("hiphop.csv")
 ko_words <- function(doc){
   d = as.character(doc)
